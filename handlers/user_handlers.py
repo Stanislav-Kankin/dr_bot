@@ -8,7 +8,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.exceptions import TelegramNetworkError
 
 from database.database import check_user, add_user
-from keyboards.inline_kb import start_kb, start_quiz_kb, create_question_kb
+from keyboards.inline_kb import start_kb, start_quiz_kb, create_question_kb, next_question_kb
 
 router = Router()
 
@@ -183,8 +183,33 @@ async def question_timer(question_num: int, message, state: FSMContext):
         # Пользователь не ответил вовремя
         user_id = message.chat.id
         timer_response = random.choice(timer_responses)
-        await message.answer(f"⏰ {timer_response}\n\nВопрос засчитан как неправильный! ❌")
-        await process_answer(question_num, None, message, state, False)
+        
+        # Сохраняем информацию о текущем вопросе для кнопки "Следующий"
+        await state.update_data(current_question=question_num)
+        
+        await message.answer(
+            f"⏰ {timer_response}\n\nВопрос засчитан как неправильный! ❌\n\nНажми кнопку ниже для продолжения 👇",
+            reply_markup=next_question_kb
+        )
+
+@router.callback_query(F.data == "next_question")
+async def process_next_question(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    
+    # Получаем текущий вопрос из состояния
+    data = await state.get_data()
+    current_question = data.get('current_question', 1)
+    
+    user_id = callback.from_user.id
+    user_scores[user_id] = user_scores.get(user_id, 0)
+    
+    await callback.message.answer(f"📊 Твой счёт: {user_scores[user_id]} из 10 ❌")
+    
+    if current_question < 10:
+        await asyncio.sleep(1)
+        await ask_question(current_question + 1, callback.message, state)
+    else:
+        await finish_quiz(user_id, callback.message, state)
 
 async def process_answer(question_num: int, callback: CallbackQuery, message, state: FSMContext, is_correct: bool):
     user_id = callback.from_user.id if callback else message.chat.id
