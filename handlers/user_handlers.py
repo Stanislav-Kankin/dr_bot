@@ -5,12 +5,17 @@ from aiogram.types import Message, CallbackQuery, FSInputFile
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.exceptions import TelegramNetworkError
 
 from database.database import check_user, add_user
-from keyboards.inline_kb import start_kb, start_quiz_kb, create_question_kb, next_question_kb
+from keyboards.inline_kb import (
+    start_kb, start_quiz_kb,
+    create_question_kb,
+    next_question_kb
+    )
+
 
 router = Router()
+
 
 class QuizStates(StatesGroup):
     waiting_for_start = State()
@@ -24,6 +29,7 @@ class QuizStates(StatesGroup):
     question_8 = State()
     question_9 = State()
     question_10 = State()
+
 
 # Правильные ответы
 correct_answers = {
@@ -68,15 +74,16 @@ timer_responses = [
 user_scores = {}
 user_timers = {}
 
+
 @router.message(CommandStart())
 async def cmd_start(message: Message):
     user_id = message.from_user.id
-    
+
     # Проверяем, проходил ли пользователь викторину
     if await check_user(user_id):
         await message.answer("🎂 Ахах, губа не дура, подожди еще годик! 😂")
         return
-    
+
     try:
         # Отправляем приветственное сообщение с картинкой
         welcome_photo = FSInputFile("images/welcome.jpg")
@@ -92,10 +99,11 @@ async def cmd_start(message: Message):
             reply_markup=start_kb
         )
 
+
 @router.callback_query(F.data == "ready_yes")
 async def process_ready(callback: CallbackQuery, state: FSMContext):
     await callback.answer()  # Важно: отвечаем на callback сначала
-    
+
     try:
         welcome2_photo = FSInputFile("images/welcome_2.jpg")
         await callback.message.answer_photo(
@@ -109,7 +117,7 @@ async def process_ready(callback: CallbackQuery, state: FSMContext):
             "🎊 Отлично! Как будешь готов, жми ниже кнопку начать! 🚀\n\nНо забыл предупредить - у вопросов стоит таймер 15 секунд! ⏳\n\nЕсли ты не успеешь - вопрос засчитывается как проигранный! 💀\n\nВот такая я жопа))) 😈 Так зато интереснее! 🎲",
             reply_markup=start_quiz_kb
         )
-    
+
     await state.set_state(QuizStates.waiting_for_start)
 
 @router.callback_query(F.data == "start_quiz")
@@ -257,14 +265,23 @@ async def finish_quiz(user_id: int, message, state: FSMContext):
 😊 Ну будь здоров, сохраняй позитив и не будь жопой! 
 ❤️ Здоровья и прочей официально банальной штуки тебе и так нажелают..."""
     
-    await message.answer(result_text)
+    try:
+        last1_photo = FSInputFile("images/last1.jpg")
+        await message.answer_photo(
+            photo=last1_photo,
+            caption=result_text
+        )
+    except Exception as e:
+        print(f"Ошибка при отправке фото last1.jpg: {e}")
+        await message.answer(result_text)
     
     # Добавляем пользователя в базу
     await add_user(user_id)
     
-    # Второе сообщение через 10 секунд
-    await asyncio.sleep(10)
-    await message.answer("""💭 Но кстати, если серьезно...
+    # Второе сообщение через 25 секунд
+    await asyncio.sleep(25)
+    
+    second_message_text = """💭 Но кстати, если серьезно...
 
 🚫 Я тебе советую никогда не оставаться "таким как есть"! 
 🔄 Если ты остаешься таким как есть - ты стоишь на месте.
@@ -273,7 +290,17 @@ async def finish_quiz(user_id: int, message, state: FSMContext):
 а умения их преодолевать и учиться на их опыте!
 
 👨‍👩‍👧‍👦 Главное в жизни - семья и позитив. 
-💖 Будь позитивен и храни семью!""")
+💖 Будь позитивен и храни семью!"""
+    
+    try:
+        last2_photo = FSInputFile("images/last2.jpg")
+        await message.answer_photo(
+            photo=last2_photo,
+            caption=second_message_text
+        )
+    except Exception as e:
+        print(f"Ошибка при отправке фото last2.jpg: {e}")
+        await message.answer(second_message_text)
     
     # Третье сообщение через 15 секунд
     await asyncio.sleep(15)
@@ -284,12 +311,12 @@ async def finish_quiz(user_id: int, message, state: FSMContext):
             photo=ozon_photo,
             caption="""🤔 Ну ладно, что-то я так подумал... 
 🎭 Наверное это было бы приятно в день рождения, 
-хоть этот день и сего... в четверг... 
+хоть этот день и сегодня... в четверг...бл$дь!
 
-🍻 Вот что мне предложишь сегодня поднять чарку за твое здоровье 
+Вот что мне предложишь сегодня поднять чарку за твое здоровье 
 и потом на работу завтра!?!? 
 
-🎪 Ловко ты придумал... или еще скажи не пить?
+Ловко ты придумал... или еще скажи не пить?
 
 🎂 Ой всё, с днем рождения, друже! 
 🎁 Маленький сувенир для тебя, там разберешься! 😉"""
