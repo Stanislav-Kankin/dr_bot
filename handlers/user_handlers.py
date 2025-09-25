@@ -306,7 +306,7 @@ async def finish_quiz(user_id: int, message, state: FSMContext):
     await asyncio.sleep(15)
     
     try:
-        ozon_photo = FSInputFile("images/ozon.jpg")
+        ozon_photo = FSInputFile("images/Подарочный сертификат.pdf")
         await message.answer_photo(
             photo=ozon_photo,
             caption="""🤔 Ну ладно, что-то я так подумал... 
@@ -320,6 +320,13 @@ async def finish_quiz(user_id: int, message, state: FSMContext):
 
 🎂 Ой всё, с днем рождения, друже! 
 🎁 Маленький сувенир для тебя, там разберешься! 😉"""
+        )
+
+        certificate_file = FSInputFile("images/Подарочный сертификат.pdf")
+        await message.answer_document(
+            document=certificate_file,
+            caption="""🎁 Вот тебе ништячок 
+    Распечатай или сохрани на телефон! 📱\n"""
         )
     except Exception as e:
         print(f"Ошибка при отправке фото подарка: {e}")
